@@ -1,0 +1,163 @@
+<html>
+
+<head>
+<img src="https://affiliate.itunes.apple.com/resources/wp-content/themes/itunes_aff/img/affiliatelockup_640.jpg" alt="itunesLogo">
+	<style>
+	img {
+  
+	display: block;
+    margin-left: auto;
+    margin-right: auto
+  
+		}
+	</style>
+<title>iTunes Search</title>
+<meta http-equiv="Cache-Control" content="no-store"/>
+<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js" type="text/javascript"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" crossorigin="anonymous"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src="https://connectors.tableau.com/libs/tableauwdc-2.0.latest.js" type="text/javascript"></script>
+<script type="text/javascript">
+
+(function () {
+	function buildURL(artist,type) {
+		var url = 'https://itunes.apple.com/search?term='+ artist + '&entity=music'+ type +'&format=JSON&limit=150&callback=?';
+		return url;
+		
+	}
+
+    var myConnector = tableau.makeConnector();
+
+    myConnector.getSchema = function (schemaCallback) {
+
+
+		var track_info = [
+			{ id : "trackName", alias : "Track Name", dataType : tableau.dataTypeEnum.string },
+			{ id : "kind", alias : "Type", dataType : tableau.dataTypeEnum.string },
+			{ id : "artistName", alias : "Artist Name", dataType : tableau.dataTypeEnum.string },
+			{ id : "trackPrice", alias : "Track Price", dataType : tableau.dataTypeEnum.float },
+			{ id : "trackExplicitness", alias : "Explicitness", dataType : tableau.dataTypeEnum.string },
+			{ id : "releaseDate", alias : "Release Date", dataType : tableau.dataTypeEnum.date }
+		];
+
+		var table_trackInfo = {
+			id : "track_table",
+			alias : "Track Info",
+			columns : track_info
+		};
+
+		var album_info = [
+			{ id : "trackName", alias : "Track Name", dataType : tableau.dataTypeEnum.string },
+			{ id : "collectionName", alias : "Collection Name", dataType : tableau.dataTypeEnum.string },
+			{ id : "collectionCensoredName", alias : "Censored Collection Name", dataType : tableau.dataTypeEnum.string },
+			{ id : "collectionPrice", alias : "Collection Price", dataType : tableau.dataTypeEnum.float },
+			{ id : "collectionExplicitness", alias : "Collection Explicitness", dataType : tableau.dataTypeEnum.string },
+			{ id : "primaryGenreName", alias : "Genre", dataType : tableau.dataTypeEnum.string },
+			{ id : "discCount", alias : "Disc Count", dataType : tableau.dataTypeEnum.float },
+			{ id : "artworkUrl100", alias : "Artwork", dataType : tableau.dataTypeEnum.string }
+
+		];
+
+		var table_albumInfo = {
+			id : "album_table",
+			alias : "Album Info",
+			columns : album_info
+		};
+
+
+		schemaCallback([table_trackInfo, table_albumInfo]); // Paste new Table Info Field name here inside the brackets, seperated by a comma
+    };
+
+
+    myConnector.getData = function (table, doneCallback) {
+		var field = tableau.connectionData.split(",")
+		var artist = field[0];
+		var type = field[1];
+		tableau.log(artist);
+		tableau.log(type);
+		var connectionUri = buildURL(artist, type)
+		$.getJSON(connectionUri, function(resp) {
+			var feat = resp.results,
+			tableData = [];
+			console.log(resp);
+
+			var i = 0;
+			// Iterate over the JSON object
+			if (table.tableInfo.id == "track_table") {
+			for (var i = 0, len = feat.length; i < len; i++) {
+					tableData.push({
+						"trackName": feat[i].trackName,
+						"kind": feat[i].kind,
+						"artistName": feat[i].artistName,
+						"trackPrice": feat[i].trackPrice,
+						"trackExplicitness": feat[i].trackExplicitness,
+						"releaseDate": feat[i].releaseDate,
+					});
+				}
+			}
+
+			if (table.tableInfo.id == "album_table") {
+			for (var i = 0, len = feat.length; i < len; i++) {
+					tableData.push({
+						"trackName": feat[i].trackName,
+						"collectionName": feat[i].collectionName,
+						"collectionCensoredName": feat[i].collectionCensoredName,
+						"collectionPrice": feat[i].collectionPrice,
+						"trackExplicitness": feat[i].trackExplicitness,
+						"primaryGenreName": feat[i].primaryGenreName,
+						"discCount": feat[i].discCount,
+						"artworkUrl100": feat[i].artworkUrl100,
+					});
+				}
+			}
+
+
+			table.appendRows(tableData);
+			doneCallback();
+		});
+
+    };
+	
+    tableau.registerConnector(myConnector);
+
+	$(document).ready(function () {
+		$("#submitButton").click(function () {
+		var artist = document.getElementById("artistName").value;
+		var type = document.getElementById("fname").value;
+		console.log(artist)
+		if (artist) {
+					tableau.connectionData = artist+","+type;
+					tableau.connectionName = "itunes search for " + artist + "'s " + type; 
+					tableau.submit();
+				};
+		});
+	});
+})();
+</script>
+</head>
+
+<body>
+
+<br>
+<center>iTunes Search Connector</center>
+<div class="container container-table">
+	<div class="row vertical-center-row">
+		<form>
+			<div class="form-group">
+				<input class="form-control" align="center" type="text" id="artistName" placeholder="Please enter artist name"/>
+			</div>
+			<div class="form-group" align="center">
+				<input type="radio" id = 'fname' name="selectType" value="Video"> Music Videos<br>
+				<input type="radio" id = 'fname' name="selectType" value="Music" checked> Music Tracks<br>
+			</div>
+		</form>
+
+			<div class="text-center col-md-4 col-md-offset-4">
+				<button type="button" id="submitButton" class="btn btn-success" style="margin: 10px;">Get Artist Data!</button>
+			</div>
+	</div>
+</div>
+</body>
+
+</html>

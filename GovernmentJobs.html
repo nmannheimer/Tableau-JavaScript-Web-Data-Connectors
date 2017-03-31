@@ -1,0 +1,113 @@
+<html>
+
+<head>
+<title>Government Jobs Search</title>
+<meta http-equiv="Cache-Control" content="no-store" />
+
+<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js" type="text/javascript"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" crossorigin="anonymous"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src="https://connectors.tableau.com/libs/tableauwdc-2.0.latest.js" type="text/javascript"></script>
+<script type="text/javascript">
+
+(function () {
+
+
+    function buildURL(params) {
+        var url = 'https://api.usa.gov/jobs/search.json?query=' + params;
+        return url;
+        
+    }
+
+    var myConnector = tableau.makeConnector();
+
+    myConnector.getSchema = function (schemaCallback) {
+        var cols = [
+            { id : "id", alias : "ID", dataType : tableau.dataTypeEnum.string },
+            { id : "position_title", alias : "Position", dataType : tableau.dataTypeEnum.string },
+            { id : "organization_name", alias : "Employer Name", dataType : tableau.dataTypeEnum.string },
+            { id : "rate_interval_code", alias : "Rate Code", dataType : tableau.dataTypeEnum.string },
+            { id : "minimum", alias : "Salary (Min)", dataType : tableau.dataTypeEnum.int },
+            { id : "maximum", alias : "Salary (Max)", dataType : tableau.dataTypeEnum.int },
+            { id : "start_date", alias : "Start Date", dataType : tableau.dataTypeEnum.date },
+            { id : "end_date", alias : "End Date", dataType : tableau.dataTypeEnum.date },
+            { id : "url", alias : "Job URL", dataType : tableau.dataTypeEnum.string }
+        ];
+
+
+
+        var tableInfo = {
+            id : "jobSearch",
+            alias : "Job Search",
+            columns : cols
+        };
+
+        schemaCallback([tableInfo]);
+    };
+
+
+    myConnector.getData = function (table, doneCallback) {
+        var params = tableau.connectionData;
+        var url = buildURL(params)
+        tableau.log(url)
+        $.getJSON(url, function(resp) {
+            var feat = resp
+            tableData = [];;
+            // Iterate over the JSON object
+            for (var i = 0, len = feat.length; i < len; i++) {
+                tableData.push({
+                    "id": feat[i].id,
+                    "position_title": feat[i].position_title,
+                    "organization_name": feat[i].organization_name,
+                    "rate_interval_code": feat[i].rate_interval_code,
+                    "minimum": feat[i].minimum,
+                    "maximum": feat[i].maximum,
+                    "start_date": feat[i].start_date,
+                    "end_date": feat[i].end_date,
+                    "url": feat[i].url,
+                });
+            }
+
+            table.appendRows(tableData);
+            doneCallback();
+        });
+
+    };
+    
+    tableau.registerConnector(myConnector);
+
+    $(document).ready(function () {
+        $("#submitButton").click(function () {
+        var params = document.getElementById("jobParams").value;
+        var params = params.replace(",","+")
+        if (params) {
+                    tableau.connectionData = params; 
+                    tableau.connectionName = "Government jobs search for " + params; 
+                    tableau.submit();
+                };
+        });
+    });
+})();
+</script>
+</head>
+
+<body>
+
+<br>
+<center>Government Jobs Connector</center>
+<div class="container container-table">
+    <div class="row vertical-center-row">
+        <form>
+            <div class="form-group">
+                <input class="form-control" align="center" type="text" id="jobParams" placeholder="Enter jobs parameters seperated by commas"/>
+            </div>
+        </form>
+            <div class="text-center col-md-4 col-md-offset-4">
+                <button type="button" id="submitButton" class="btn btn-success" style="margin: 10px;">Find Some Jobs!</button>
+            </div>
+    </div>
+</div>
+</body>
+
+</html>
